@@ -1,0 +1,1 @@
+nohup python rc.py $* &
