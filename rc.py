@@ -23,7 +23,25 @@ op = {
     '-': sub,
     '*': mul,
     '/': truediv,
-    '^': pow
+    '^': pow,
+}
+
+
+aliases = {
+    'plus': '+', 'KP_Add': '+',
+    'minus': '-', 'KP_Subtract': '-',
+    'asterisk': '*', 'KP_Multiply': '*',
+    'slash': '/', 'KP_Divide': '/',
+    'asciicircum': '^',
+    'q': sg.WIN_CLOSED, 'Q': sg.WIN_CLOSED, 'Quit': sg.WIN_CLOSED,
+    'Return': 'Enter', 'KP_Enter': 'Enter', '\r': 'Enter',
+    'Delete': 'Clear', 'c': 'Clear', 'C': 'Clear',
+    'D': 'Drop', 'd': 'Drop', 'BackSpace': 'Drop',
+    's': 'Swap', 'S': 'Swap',
+    'm': '+/-', 'M': '+/-',
+    'period': '.', 'KP_Decimal': '.',
+    'e': 'E',
+    'h': 'Help', 'H': 'Help',
 }
 
 
@@ -94,8 +112,6 @@ class Stack:
         self._stack = []
 
 
-
-
 def pprint_stack(stack) -> str:
     index_width = 1 + (display_size // 10)
     number_width = text_width - (index_width + 2)  # reserve space for index + ': '
@@ -142,21 +158,27 @@ layout = [
 
 window = sg.Window(
    'RPN Calculator', layout,
-   no_titlebar=True,
-   return_keyboard_events=True,
+   # no_titlebar=True,
    default_button_element_size=button_size,
    auto_size_buttons=False,
    grab_anywhere=True,
    keep_on_top=keep_on_top,
+   finalize=True,
 )
+window.bind('<Key>', 'Key')
 
 while True:
     event, values = window.read()
+    if event == 'Key':
+        event = str(window.user_bind_event.keysym)
+        if len(event) == 4 and event.startswith('KP_'):
+            event = event[-1]
+    event = aliases.get(event, event)
 
-    if event in (sg.WIN_CLOSED, 'Q', 'q', 'Quit'):
+    if event == sg.WIN_CLOSED:
         break
 
-    if event in ('Enter', '\r'):
+    if event == 'Enter':
         if edit_line:
             if edit_line.endswith('e'):
                 edit_line = edit_line[:-1]
@@ -165,13 +187,13 @@ while True:
             window['edit_line'].update(edit_line)
             window['stack'].update(pprint_stack(stack))
 
-    elif event in ('Delete:46', 'c', 'C', 'Clear'):
+    elif event == 'Clear':
         edit_line = ''
         stack.clear()
         window['edit_line'].update(edit_line)
         window['stack'].update(pprint_stack(stack))
 
-    elif event in ('Drop', 'D', 'd', 'BackSpace:8'):
+    elif event == 'Drop':
         if edit_line:
             edit_line = edit_line[:-1]
             window['edit_line'].update(edit_line)
@@ -182,7 +204,7 @@ while True:
             stack.pop()
             window['stack'].update(pprint_stack(stack))
 
-    elif event in ('Swap', 'S', 's'):
+    elif event == 'Swap':
         if edit_line:
             window['error_display'].update('No swap while editing')
             continue
@@ -193,8 +215,11 @@ while True:
             continue
         window['stack'].update(pprint_stack(stack))
 
-    elif event in ('+/-', 'M', 'm'):
-        if 'e' in edit_line:
+    elif event == '+/-':
+        if not edit_line:
+            stack.push(-stack.pop())
+            window['stack'].update(pprint_stack(stack))
+        elif 'e' in edit_line:
             base, exp = edit_line.split('e')
             edit_line = 'e'.join((base, toggle_sign(exp)))
         else:
@@ -208,7 +233,7 @@ while True:
         edit_line = f'{edit_line}.'
         window['edit_line'].update(edit_line)
 
-    elif event in 'Ee':
+    elif event == 'E':
         if 'e' in edit_line:
             window['error_display'].update('Only one "e" allowed')
             continue
@@ -240,7 +265,7 @@ while True:
         stack.push(result)
         window['stack'].update(pprint_stack(stack))
 
-    elif event in ('Help', 'H', 'h'):
+    elif event == 'Help':
         sg.popup(help_text)
 
     else:
