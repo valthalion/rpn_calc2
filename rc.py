@@ -4,46 +4,44 @@ An RPN Calculator
 
 
 from itertools import chain
-# from math import sqrt, sin, cos, tan
-from operator import add, mul, sub, truediv
 from sys import argv
 from typing import Any, Iterable, List, Optional, Tuple, Union
 
 import PySimpleGUI as sg
+
+from ops import aliases, operators
+from stack import Stack
+from errors import NotEnoughArgumentsError
+
+
+################################################################################
+# Initial Definitions
+
+help_text = """
+Keyboard uses the same keys as
+the GUI buttons, and these aliases:
+
+Quit: q
+Drop: d, Backspace
+Clear: c, Del
+Swap: s
++/-: m
+
+All commands are case-insensitive.
+"""
+
+def toggle_sign(num):
+    if num.startswith('-'):
+        return num[1:]
+    return f'-{num}'
+
+
 sg.theme('DarkGrey13')
 sg.set_options(element_padding=(0, 0))
 
 
-class NotEnoughArgumentsError(RuntimeError):
-    pass
-
-
-op = {
-    '+': add,
-    '-': sub,
-    '*': mul,
-    '/': truediv,
-    '^': pow,
-}
-
-
-aliases = {
-    'plus': '+', 'KP_Add': '+',
-    'minus': '-', 'KP_Subtract': '-',
-    'asterisk': '*', 'KP_Multiply': '*',
-    'slash': '/', 'KP_Divide': '/',
-    'asciicircum': '^',
-    'q': sg.WIN_CLOSED, 'Q': sg.WIN_CLOSED, 'Quit': sg.WIN_CLOSED,
-    'Return': 'Enter', 'KP_Enter': 'Enter', '\r': 'Enter',
-    'Delete': 'Clear', 'c': 'Clear', 'C': 'Clear',
-    'D': 'Drop', 'd': 'Drop', 'BackSpace': 'Drop',
-    's': 'Swap', 'S': 'Swap',
-    'm': '+/-', 'M': '+/-',
-    'period': '.', 'KP_Decimal': '.',
-    'e': 'E',
-    'h': 'Help', 'H': 'Help',
-}
-
+################################################################################
+# Read options and set parameters
 
 options = '' if len(argv) <= 1 else argv[1]
 if 'l' in options:
@@ -59,67 +57,15 @@ keep_on_top = 't' in options
 display_size = 4
 text_width = 22
 
-help_text = """
-Keyboard uses the same keys as
-the GUI buttons, and these aliases:
 
-Quit: q
-Drop: d, Backspace
-Clear: c, Del
-Swap: s
-+/-: m
-
-All commands are case-insensitive.
-"""
-
-
-def toggle_sign(num):
-    if num.startswith('-'):
-        return num[1:]
-    return f'-{num}'
-
-
-class Stack:
-    def __init__(self) -> None:
-        self._stack: List = []
-
-    def __bool__(self):
-        return len(self._stack) > 0
-
-    def __len__(self):
-        return len(self._stack)
-
-    def __iter__(self):
-        return iter(self._stack)
-
-    def push(self, value: Any) -> None:
-        self._stack.append(value)
-
-    def pop(self, n: int = 1) -> Union[Tuple, Any]:
-        if len(self._stack) < n:
-            raise NotEnoughArgumentsError(self, n)
-        if n == 1:
-            return self._stack.pop()
-        self._stack, result = self._stack[:-n], self._stack[-n:]
-        return tuple(result)
-
-    def swap(self):
-        if len(self._stack) < 2:
-            raise NotEnoughArgumentsError('Too few arguments')
-        self._stack[-1], self._stack[-2] = self._stack[-2], self._stack[-1]
-
-    def clear(self) -> None:
-        self._stack = []
-
-
-def pprint_stack(stack) -> str:
+def pprint_stack(stack: Stack) -> str:
     index_width = 1 + (display_size // 10)
     number_width = text_width - (index_width + 2)  # reserve space for index + ': '
 
     if len(stack) >= display_size:
         return '\n'.join(
             f'{row:>{index_width}d}: {number:>{number_width}g}'
-            for row, number in zip(range(display_size, 0, -1), stack[display_size:])
+            for row, number in zip(range(display_size, 0, -1), stack[-display_size:])
             )
 
     stack_len = len(stack)
@@ -137,12 +83,42 @@ def pprint_stack(stack) -> str:
     )
 
 
+################################################################################
+# Declare GUI items
+
 stack = Stack()
 edit_line = ''
 
-error_display = sg.Text('', key='error_display', size=(text_width, 1), font=('Fira Code', text_size), text_color='red', pad=(0, 3), justification='l')
-stack_display = sg.Text(pprint_stack(stack), key='stack', size=(text_width, display_size), font=('Fira Code', text_size), pad=(0, 3))
-edit_line_display = sg.Text(edit_line, key='edit_line', size=(text_width, 1), font=('Fira Code', text_size), pad=(0, 3), justification='r')
+error_display = sg.Text(
+    '',
+    key='error_display',
+    size=(text_width, 1),
+    font=('Fira Code', text_size),
+    text_color='red',
+    pad=(0, 3),
+    justification='l',
+)
+
+stack_display = sg.Text(
+    pprint_stack(stack),
+    key='stack',
+    size=(text_width, display_size),
+    font=('Fira Code', text_size),
+    pad=(0, 3),
+)
+
+edit_line_display = sg.Text(
+    edit_line,
+    key='edit_line',
+    size=(text_width, 1),
+    font=('Fira Code', text_size),
+    pad=(0, 3),
+    justification='r',
+)
+
+
+################################################################################
+# Specify layout & create window
 
 layout = [
     [error_display],
@@ -167,20 +143,31 @@ window = sg.Window(
 )
 window.bind('<Key>', 'Key')
 
+
+################################################################################
+# Event loop
+
 while True:
     event, values = window.read()
+
+    # Key pressed: retrieve key value
     if event == 'Key':
         event = str(window.user_bind_event.keysym)
+        # Strip 'KP_' prefix from num pad numbers -> same as normal number keys
         if len(event) == 4 and event.startswith('KP_'):
             event = event[-1]
+
+    # Check if the event is an alias and set the cannonical value
     event = aliases.get(event, event)
 
     if event == sg.WIN_CLOSED:
         break
 
+    # Start event evaluation (note if, elif, ... structure if adding more)
+
     if event == 'Enter':
         if edit_line:
-            if edit_line.endswith('e'):
+            if edit_line.endswith('e'):  # Drop trailing 'e', assume equvalent to e0
                 edit_line = edit_line[:-1]
             stack.push(float(edit_line))
             edit_line = ''
@@ -188,41 +175,25 @@ while True:
             window['stack'].update(pprint_stack(stack))
 
     elif event == 'Clear':
-        edit_line = ''
-        stack.clear()
-        window['edit_line'].update(edit_line)
-        window['stack'].update(pprint_stack(stack))
+        if edit_line:  # if editing, delete edit line
+            edit_line = ''
+            window['edit_line'].update(edit_line)
+        else:  # clear the stack
+            stack.clear()
+            window['stack'].update(pprint_stack(stack))
 
-    elif event == 'Drop':
-        if edit_line:
+    elif event == 'Drop' and edit_line:  # if not editing, will be interpreted later as an operator
+        if edit_line:  # if editing, delete last character
             edit_line = edit_line[:-1]
             window['edit_line'].update(edit_line)
-        else:
-            if not stack:
-                window['error_display'].update('Too few arguments')
-                continue
-            stack.pop()
-            window['stack'].update(pprint_stack(stack))
+        else:  # drop top stack item
+            evaluate(event)
 
-    elif event == 'Swap':
-        if edit_line:
-            window['error_display'].update('No swap while editing')
-            continue
-        try:
-            stack.swap()
-        except NotEnoughArgumentsError as e:
-            window['error_display'].update(str(e))
-            continue
-        window['stack'].update(pprint_stack(stack))
-
-    elif event == '+/-':
-        if not edit_line:
-            stack.push(-stack.pop())
-            window['stack'].update(pprint_stack(stack))
-        elif 'e' in edit_line:
+    elif event == '+/-' and edit_line:  # if not editing, will be interpreted later as an operator
+        if 'e' in edit_line:  # if editing the exponent, toggle exponent sign
             base, exp = edit_line.split('e')
             edit_line = 'e'.join((base, toggle_sign(exp)))
-        else:
+        else:  # toggle mantissa sign
             edit_line = toggle_sign(edit_line)
         window['edit_line'].update(edit_line)
 
@@ -237,32 +208,44 @@ while True:
         if 'e' in edit_line:
             window['error_display'].update('Only one "e" allowed')
             continue
-        edit_line += 'e'
+        if edit_line:
+            edit_line = f'{edit_line}e'
+        else:  # empty line -> interpret as 1e
+            edit_line = '1e'
         window['edit_line'].update(edit_line)
 
     elif event in '0123456789':
-        edit_line += event
+        edit_line = f'{edit_line}{event}'
         window['edit_line'].update(edit_line)
 
-    elif event in op:
-        if edit_line:
+    elif event in operators:
+        if edit_line:  # if editing, push to stack before operating; taken from Enter event
+            if edit_line.endswith('e'):  # Drop trailing 'e', assume equvalent to e0
+                edit_line = edit_line[:-1]
             stack.push(float(edit_line))
             edit_line = ''
-        window['edit_line'].update(edit_line)
-        window['stack'].update(pprint_stack(stack))
+            window['edit_line'].update(edit_line)
+            window['stack'].update(pprint_stack(stack))
+        operator = operators[event]
         try:
-            args = stack.pop(2)
+            args = stack.pop_iter(operator.arity_in)
         except NotEnoughArgumentsError:
             window['error_display'].update('Too few arguments')
             continue
-        try:
-            result = op[event](*args)
-        except Exception as e:
-            window['error_display'].update(str(e))
-            for arg in args:
-                stack.push(arg)
-            continue
-        stack.push(result)
+        if operator.func is not None:
+            try:
+                result = operator.func(*args)
+            except Exception as e:
+                window['error_display'].update(str(e))
+                for arg in args:
+                    stack.push(arg)
+                continue
+        if operator.arity_out == 1:
+            stack.push(result)
+        elif operator.arity_out > 1:
+            stack.push_iter(result)
+        else:  # arity_out == 0
+            pass
         window['stack'].update(pprint_stack(stack))
 
     elif event == 'Help':
