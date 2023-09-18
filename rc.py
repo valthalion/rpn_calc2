@@ -167,8 +167,8 @@ while True:
 
     if event == 'Enter':
         if edit_line:
-            if edit_line.endswith('e'):  # Drop trailing 'e', assume equvalent to e0
-                edit_line = edit_line[:-1]
+            if edit_line.endswith('e') or edit_line.endswith('e-'):  # Drop trailing 'e' or 'e-', assume equvalent to e0
+                edit_line = edit_line.split('e')[0]
             stack.push(float(edit_line))
             edit_line = ''
             window['edit_line'].update(edit_line)
