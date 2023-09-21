@@ -39,5 +39,12 @@ class Stack:
         self._stack, result = self._stack[:-n], self._stack[-n:]
         return tuple(result)
 
+    def peek(self, n: int = 1) -> Union[Tuple, Any]:
+        if len(self._stack) < n:
+            raise NotEnoughArgumentsError('Too few arguments')
+        if n == 1:
+            return self._stack[-1]
+        return tuple(self._stack[-n:])
+
     def clear(self) -> None:
         self._stack = []

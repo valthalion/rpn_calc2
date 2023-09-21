@@ -27,6 +27,7 @@ Quit: q
 Drop: d, Backspace
 Clear: c, Del
 Swap: s
+Dup[licate]: Enter
 +/-: m
 
 All commands are case-insensitive.
@@ -168,12 +169,15 @@ while True:
     # Start event evaluation (note if, elif, ... structure if adding more)
 
     if event == 'Enter':
-        if edit_line:
+        if edit_line:  # Push current edit line to stack
             if edit_line.endswith('e') or edit_line.endswith('e-'):  # Drop trailing 'e' or 'e-', assume equvalent to e0
                 edit_line = edit_line.split('e')[0]
             stack.push(float(edit_line))
             edit_line = ''
             window['edit_line'].update(edit_line)
+            window['stack'].update(pprint_stack(stack))
+        elif stack:  # Not editing -> duplicate top stack item
+            stack.push(stack.peek())
             window['stack'].update(pprint_stack(stack))
 
     elif event == 'Clear':
