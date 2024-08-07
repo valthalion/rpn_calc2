@@ -28,12 +28,16 @@ class Stack:
     def pop(self, n: int = 1) -> Union[Tuple, Any]:
         if len(self._stack) < n:
             raise NotEnoughArgumentsError('Too few arguments')
+        if n == 0:
+            return tuple()
         if n == 1:
             return self._stack.pop()
         self._stack, result = self._stack[:-n], self._stack[-n:]
         return tuple(result)
 
     def pop_iter(self, n: int = 1) -> Union[Tuple, Any]:
+        if n == 0:
+            return tuple()
         if len(self._stack) < n:
             raise NotEnoughArgumentsError('Too few arguments')
         self._stack, result = self._stack[:-n], self._stack[-n:]
