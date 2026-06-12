@@ -47,22 +47,6 @@ def toggle_sign(num):
     return f'-{num}'
 
 
-def NumButton(*args, **kwargs):
-    return sg.Button(*args, button_color=('white', 'steel blue'), **kwargs)
-
-
-def OpButton(*args, **kwargs):
-    return sg.Button(*args, button_color=('white', 'grey30'), **kwargs)
-
-
-def CmdButton(*args, **kwargs):
-    return sg.Button(*args, button_color=('white', 'grey10'), **kwargs)
-
-
-def AlertButton(*args, **kwargs):
-    return sg.Button(*args, button_color=('white', 'red'), **kwargs)
-
-
 def main():
     sg.theme('DarkGrey13')
     sg.set_options(element_padding=(0, 0))
@@ -73,17 +57,15 @@ def main():
 
     options = '' if len(argv) <= 1 else argv[1]
     if 'l' in options:
-        button_size = (9, 3)
-        text_size = 16
+        text_size = 24
     elif 's' in options:
-        button_size = (5, 2)
-        text_size = 10
-    else:
-        button_size = (8, 2)
         text_size = 14
+    else:
+        text_size = 18
     keep_on_top = 't' in options
     display_size = 4
-    text_width = 22
+    text_width = 24
+    font = ('Fira Code', text_size)
 
 
     def pprint_stack(stack: Stack) -> str:
@@ -100,7 +82,8 @@ def main():
         return '\n'.join(
             chain(
                 (
-                    ': '.join((f'{row:>{index_width}d}', ' ' * number_width))
+                    # ': '.join((f'{row:>{index_width}d}', ' ' * number_width))
+                    f'{row:>{index_width}d}:'
                     for row in range(display_size, stack_len, -1)
                 ),
                 (
@@ -145,6 +128,18 @@ def main():
         justification='r',
     )
 
+    def NumButton(*args, **kwargs):
+        return sg.Button(*args, button_color=('white', 'steel blue'), size=6, font=font, **kwargs)
+
+    def OpButton(*args, **kwargs):
+        return sg.Button(*args, button_color=('white', 'grey30'), size=6, font=font, **kwargs)
+
+    def CmdButton(*args, **kwargs):
+        return sg.Button(*args, button_color=('white', 'grey10'), size=6, font=font, **kwargs)
+
+    def AlertButton(*args, **kwargs):
+        return sg.Button(*args, button_color=('white', 'red'), size=6, font=font, **kwargs)
+
 
     ################################################################################
     # Specify layout & create window
@@ -170,7 +165,7 @@ def main():
     window = sg.Window(
        'RPN Calculator', layout,
        # no_titlebar=True,
-       default_button_element_size=button_size,
+       # default_button_element_size=button_size,
        auto_size_buttons=False,
        grab_anywhere=True,
        keep_on_top=keep_on_top,
