@@ -31,11 +31,13 @@ Commands use capital letters:
     - Dup[licate]: Enter
 - Memory
     - Save: M
-    - 
+    - Load: L
+    - Clear Memory: X
 - Misc
     - Help: H
     - Quit: Q
     - Insert 'e' constant: E
+    - Insert 'pi' constant: P
     - Operator aliases: A
 
 All trigonometric functions use radians.

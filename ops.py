@@ -71,7 +71,7 @@ aliases = {
     'l': 'ln',
     'm': '+/-',
     'r': 'D2R',
-    'p': 'pi',
+    'p': '^',
     's': 'sqrt',
     'x': 'exp',
 }
@@ -84,7 +84,9 @@ commands = {
     'H': 'Help',
     'L': 'Load',
     'M': 'Save',
+    'P': 'pi',
     'S': 'Swap',
+    'T': '2^n',
     'X': 'ClrMem',
 }
 
