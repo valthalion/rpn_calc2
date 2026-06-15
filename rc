@@ -1,1 +1,2 @@
-nohup python rc.py $* &
+uv run rc.py "$@"
+
