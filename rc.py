@@ -6,6 +6,8 @@ An RPN Calculator
 
 
 from itertools import chain
+import json
+from pathlib import Path
 from sys import argv
 from typing import Any, Iterable, List, Optional, Tuple, Union
 
@@ -14,6 +16,33 @@ import PySimpleGUI as sg
 from ops import aliases, all_aliases, operators
 from stack import Stack
 from errors import NotEnoughArgumentsError
+
+
+def load_persistent_state():
+    """Load state from file"""
+    filename = Path.home() / '.config' / 'rpn_calc2.conf'
+    try:
+        with open(filename, 'r') as f:
+            state = json.load(f)
+    except FileNotFoundError: # No conf file, start with no state
+        return Stack(), '', None
+    stack = Stack()
+    stack.push_iter(state['stack'])
+    return stack, state['edit_line'], state['memory']
+
+
+def save_persistent_state(stack, edit_line, memory):
+    """Save state to file"""
+    filename = Path.home() / '.config' / 'rpn_calc2.conf'
+    with open(filename, 'w') as f:
+        json.dump(
+            {
+                'stack': stack._stack,
+                'edit_line': edit_line,
+                'memory': memory
+            },
+            f
+        )
 
 
 ################################################################################
@@ -65,6 +94,7 @@ def main():
     else:
         text_size = 18
     keep_on_top = 't' in options
+    use_persistent_state = 'm' in options
     display_size = 4
     text_width = 24
     font = ('Fira Code', text_size)
@@ -99,9 +129,12 @@ def main():
     ################################################################################
     # Declare GUI items
 
-    stack = Stack()
-    edit_line = ''
-    memory: Optional[dict] = None
+    if use_persistent_state:
+        stack, edit_line, memory = load_persistent_state()
+    else:
+        stack = Stack()
+        edit_line = ''
+        memory: Optional[dict] = None
 
     error_display = sg.Text(
         '',
@@ -193,6 +226,8 @@ def main():
         event = all_aliases.get(event, event)
 
         if event == sg.WIN_CLOSED:
+            if use_persistent_state:
+                save_persistent_state(stack, edit_line, memory)
             break
 
         # Start event evaluation (note if, elif, ... structure if adding more)
