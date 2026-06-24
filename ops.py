@@ -101,7 +101,7 @@ other_aliases = {
     'Delete': 'Clear', 'clear': 'clear',
     'BackSpace': 'Drop', 'drop': 'Drop',
     'swap': 'Swap',
-    'Q': WIN_CLOSED, 'Quit': WIN_CLOSED,
+    'Q': WIN_CLOSED, 'Quit': WIN_CLOSED, 'Escape': WIN_CLOSED,
     'd2r': 'D2R',
     'r2d': 'R2D',
 }
